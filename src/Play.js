@@ -4,8 +4,13 @@ class Play extends Phaser.Scene {
     }
 
     init() {
-        // useful variables
+        this.SHOT_VELOCITY_X = 400
+        this.SHOT_VELOCITY_Y_MIN = 700
+        this.SHOT_VELOCITY_Y_MAX = 1100
 
+        // score tracking
+        this.shots = 0
+        this.made = 0
     }
 
     preload() {
@@ -18,35 +23,92 @@ class Play extends Phaser.Scene {
     }
 
     create() {
-        // add background grass
         this.grass = this.add.image(0, 0, 'grass').setOrigin(0)
 
-        // add cup
-        
-        // add ball
+        this.cup = this.physics.add.sprite(width / 2, height / 10, "cup")
+        this.cup.body.setCircle(this.cup.width / 4)
+        this.cup.body.setOffset(this.cup.width / 4)
+        this.cup.body.setImmovable(true)
 
-        // add walls
+        // ball
+        this.ball = this.physics.add.sprite(width / 2, height - height / 10, "ball")
+        this.ball.body.setCircle(this.ball.width / 2)
+        this.ball.setCollideWorldBounds(true)
+        this.ball.setBounce(0.5)
+        this.ball.setDamping(true).setDrag(0.5)
 
-        // add one-way
+        // walls
+        let wallA = this.physics.add.sprite(
+            Phaser.Math.Between(50, width - 50),
+            height / 4,
+            "wall"
+        )
+        wallA.body.setImmovable(true)
 
-        // add pointer input
+        let wallB = this.physics.add.sprite(
+            Phaser.Math.Between(50, width - 50),
+            height / 2,
+            "wall"
+        )
+        wallB.body.setImmovable(true)
 
-        // cup/ball collision
+        // moving wall (FEATURE)
+        wallB.body.setVelocityX(150)
+        wallB.body.setCollideWorldBounds(true)
+        wallB.body.setBounce(1, 0)
 
-        // ball/wall collision
+        this.walls = [wallA, wallB]
 
-        // ball/one-way collision
+        // one-way wall
+        this.oneWay = this.physics.add.sprite(
+            Phaser.Math.Between(50, width - 50),
+            height * 0.75,
+            "oneway"
+        )
+        this.oneWay.body.setImmovable(true)
+        this.oneWay.body.checkCollision.down = false
+
+        // UI text (FEATURE)
+        this.uiText = this.add.text(10, 10, '', {
+            fontSize: '18px',
+            fill: '#fff'
+        })
+
+        // pointer shot logic (FEATURE)
+        this.input.on("pointerdown", (pointer) => {
+            let dx = pointer.x - this.ball.x
+            let dy = pointer.y <= this.ball.y ? 1 : -1
+
+            this.ball.body.setVelocityX(
+                Phaser.Math.Clamp(dx * 3, -this.SHOT_VELOCITY_X, this.SHOT_VELOCITY_X)
+            )
+
+            this.ball.body.setVelocityY(
+                Phaser.Math.Between(this.SHOT_VELOCITY_Y_MIN, this.SHOT_VELOCITY_Y_MAX) * dy
+            )
+
+            this.shots++
+        })
+
+        // ball hits cup (FEATURE)
+        this.physics.add.collider(this.ball, this.cup, () => {
+            this.made++
+            this.resetBall()
+        })
+
+        this.physics.add.collider(this.ball, this.walls)
+        this.physics.add.collider(this.ball, this.oneWay)
     }
 
     update() {
+        // update UI
+        let pct = this.shots > 0 ? Math.round((this.made / this.shots) * 100) : 0
+        this.uiText.text = `Shots: ${this.shots}\nMade: ${this.made}\nSuccess: ${pct}%`
+    }
 
+    // ball reset logic (FEATURE)
+    resetBall() {
+        this.ball.setVelocity(0)
+        this.ball.setPosition(width / 2, height - height / 10)
     }
 }
-/*
-CODE CHALLENGE
-Try to implement at least 3/4 of the following features during the remainder of class (hint: each takes roughly 15 or fewer lines of code to implement):
-[ ] Add ball reset logic on successful shot
-[ ] Improve shot logic by making pointer’s relative x-position shoot the ball in correct x-direction
-[ ] Make one obstacle move left/right and bounce against screen edges
-[ ] Create and display shot counter, score, and successful shot percentage
-*/
